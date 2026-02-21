@@ -24,13 +24,13 @@ class MonitorScheduler:
 
         # Настройка расписания для каждого монитора
         for monitor in self.monitors:
-            # Ежедневный отчет в указанное время
             report_time = monitor.config.daily_report_time
+            # Ежедневный отчёт только в указанное время (раз в день)
             schedule.every().day.at(report_time).do(
-                self._run_monitor_check, monitor
+                self._run_daily_report, monitor
             ).tag('daily_report', monitor.config.name)
 
-            # Регулярные проверки по интервалу
+            # Периодические проверки — только обновление состояния, без отправки отчёта в ТГ
             schedule.every(monitor.config.check_interval).minutes.do(
                 self._run_monitor_check, monitor
             ).tag('regular_check', monitor.config.name)
@@ -60,15 +60,23 @@ class MonitorScheduler:
             schedule.run_pending()
             time.sleep(60)  # Проверяем каждую минуту
 
+    def _run_daily_report(self, monitor):
+        """Запуск проверки и отправка ежедневного отчёта в ТГ (только в указанное время)."""
+        try:
+            logging.info(f"Запуск ежедневного отчёта для монитора: {monitor.config.name}")
+            result = monitor.check_medical_records(force_daily_report=True)
+            if result.get('status') == 'error':
+                logging.error(f"Ошибка при ежедневном отчёте {monitor.config.name}: {result.get('error')}")
+        except Exception as e:
+            logging.error(f"Необработанная ошибка в ежедневном отчёте {monitor.config.name}: {e}")
+
     def _run_monitor_check(self, monitor):
-        """Запуск проверки для монитора"""
+        """Периодическая проверка без отправки отчёта в ТГ (только обновление состояния)."""
         try:
             logging.debug(f"Запуск плановой проверки для монитора: {monitor.config.name}")
-            result = monitor.check_medical_records()
-
+            result = monitor.check_medical_records(force_daily_report=False)
             if result.get('status') == 'error':
                 logging.error(f"Ошибка при проверке {monitor.config.name}: {result.get('error')}")
-
         except Exception as e:
             logging.error(f"Необработанная ошибка в проверке {monitor.config.name}: {e}")
 

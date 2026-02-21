@@ -21,7 +21,6 @@ https://docs.google.com/spreadsheets/d/1V5lg68q8_poELjEiywKNpmTCb863-_8Mg-yYiSy7
 - Введите username бота (должен заканчиваться на 'bot', например: medical_monitor_bot)
 4. Скопируйте полученный токен:
 
-8352065538:AAGt89Ue9w89lpFD2POB_31J5YkakdxCJBA
 
 ## 3. Получение Telegram Chat ID
 

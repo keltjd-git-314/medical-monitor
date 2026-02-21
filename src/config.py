@@ -24,7 +24,6 @@ class MonitorConfig:
         try:
             self.report_time_obj = time.fromisoformat(self.daily_report_time)
         except ValueError:
-            # Если формат не ISO, парсим как HH:MM
             from datetime import datetime
             dt = datetime.strptime(self.daily_report_time, "%H:%M")
             self.report_time_obj = dt.time()

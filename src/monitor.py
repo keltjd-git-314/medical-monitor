@@ -159,9 +159,13 @@ class MedicalMonitor:
 
         logging.info(f"Инициализирован монитор: {config.name}")
 
-    def check_medical_records(self) -> Dict[str, Any]:
+    def check_medical_records(self, force_daily_report: bool = None) -> Dict[str, Any]:
         """
-        Проверка медицинских записей
+        Проверка медицинских записей.
+
+        Args:
+            force_daily_report: True — отправить ежедневный отчёт (вызов в назначенное время);
+                False — не отправлять (периодическая проверка); None — решать по времени.
 
         Returns:
             Dict с результатами проверки
@@ -205,10 +209,14 @@ class MedicalMonitor:
             if self.config.send_new_employee_notifications and new_employees:
                 self._send_new_employee_notification(new_employees)
 
-            # 7. Отправка ежедневного отчета (если время)
-            if self._should_send_daily_report():
-                self._send_daily_report(expired, critical, no_medical)
-                self.last_daily_report = datetime.now().date()
+            # 7. Отправка ежедневного отчёта только раз в день в указанное время (в 00:06 — только сообщение об обновлении, не полный отчёт)
+            if force_daily_report is True or (force_daily_report is None and self._should_send_daily_report()):
+                now = datetime.now()
+                if now.hour == 0 and now.minute == 6:
+                    self.send_data_updated_message()
+                else:
+                    self._send_daily_report(expired, critical, no_medical)
+                self.last_daily_report = now.date()
 
             # 8. Сохранение состояния
             self.state_manager.save()
@@ -335,6 +343,17 @@ class MedicalMonitor:
 
         self.telegram_bot.send_message(message)
         logging.info(f"Отправлен ежедневный отчет: {total_problematic} проблемных сотрудников")
+
+    def send_data_updated_message(self):
+        """Отправка короткого сообщения об обновлении данных (без отчёта со списком сотрудников)."""
+        message = (
+            f"🔄 <b>Обновление данных</b>\n\n"
+            f"<b>Монитор:</b> {self.config.name}\n"
+            f"⏰ {datetime.now().strftime('%d.%m.%Y %H:%M')}\n\n"
+            f"Данные из таблицы успешно обновлены."
+        )
+        self.telegram_bot.send_message(message)
+        logging.info(f"Отправлено сообщение об обновлении данных для монитора: {self.config.name}")
 
     def send_immediate_alert(self, employee: Dict[str, Any], alert_type: str):
         """
