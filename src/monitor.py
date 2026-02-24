@@ -173,6 +173,7 @@ class MedicalMonitor:
         logging.info(f"Запуск проверки для монитора: {self.config.name}")
 
         try:
+            now = datetime.now()
             # 1. Получение данных из Google Sheets
             raw_data = self.google_client.get_worksheet_data(
                 self.config.spreadsheet_id,
@@ -206,13 +207,20 @@ class MedicalMonitor:
             }
 
             # 6. Отправка уведомлений о новых сотрудниках
+            # В полночь (час == 0) не шлём длинный список — только общее сообщение об обновлении данных
             if self.config.send_new_employee_notifications and new_employees:
-                self._send_new_employee_notification(new_employees)
+                if now.hour == 0:
+                    logging.info(
+                        f\"Обнаружены новые сотрудники в полночь для монитора {self.config.name}, "
+                        \"подробное уведомление пропущено (ночное обновление)\"
+                    )
+                else:
+                    self._send_new_employee_notification(new_employees)
 
-            # 7. Отправка ежедневного отчёта только раз в день в указанное время (в 00:06 — только сообщение об обновлении, не полный отчёт)
+            # 7. Отправка ежедневного отчёта только раз в день в указанное время
             if force_daily_report is True or (force_daily_report is None and self._should_send_daily_report()):
-                now = datetime.now()
-                if now.hour == 0 and now.minute == 6:
+                # В полночь не присылаем большой отчёт со списками — только короткое сообщение об обновлении
+                if now.hour == 0:
                     self.send_data_updated_message()
                 else:
                     self._send_daily_report(expired, critical, no_medical)
