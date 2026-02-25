@@ -211,8 +211,8 @@ class MedicalMonitor:
             if self.config.send_new_employee_notifications and new_employees:
                 if now.hour == 0:
                     logging.info(
-                        f\"Обнаружены новые сотрудники в полночь для монитора {self.config.name}, "
-                        \"подробное уведомление пропущено (ночное обновление)\"
+                        f"Обнаружены новые сотрудники в полночь для монитора {self.config.name}, "
+                        "подробное уведомление пропущено (ночное обновление)"
                     )
                 else:
                     self._send_new_employee_notification(new_employees)
