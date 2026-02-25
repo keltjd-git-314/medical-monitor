@@ -272,28 +272,35 @@ class MedicalMonitor:
         return False
 
     def _send_new_employee_notification(self, new_employees: List[EmployeeState]):
-        """Отправка уведомления о новых сотрудниках"""
+        """Отправка уведомления о новых сотрудниках.
+
+        Для каждого нового сотрудника отправляем отдельное короткое сообщение,
+        без общего большого списка.
+        """
         if not new_employees:
             return
 
-        message = f"🆕 <b>НОВЫЙ СОТРУДНИК ВНЕСЕН В ТАБЛИЦУ</b>\n\n"
-        message += f"<b>Монитор:</b> {self.config.name}\n\n"
-
-        for i, employee in enumerate(new_employees[:10], 1):  # Ограничим 10 сотрудниками
+        for employee in new_employees:
             status_emoji = "❌" if not employee.has_medical_book else "⚠️"
-            status_text = "Нет медкнижки" if not employee.has_medical_book else f"Осталось дней: {employee.days_left}"
+            status_text = (
+                "Нет медкнижки"
+                if not employee.has_medical_book
+                else f"Осталось дней: {employee.days_left}"
+            )
 
-            message += f"{i}. {status_emoji} <b>{employee.name}</b>\n"
+            message = (
+                "🆕 <b>НОВЫЙ СОТРУДНИК ВНЕСЕН В ТАБЛИЦУ</b>\n\n"
+                f"<b>Монитор:</b> {self.config.name}\n\n"
+                f"{status_emoji} <b>{employee.name}</b>\n"
+            )
             if employee.position:
-                message += f"   💼 {employee.position}\n"
-            message += f"   📅 {status_text}\n\n"
+                message += f"💼 {employee.position}\n"
 
-        if len(new_employees) > 10:
-            message += f"<i>...и еще {len(new_employees) - 10} сотрудников</i>\n\n"
+            message += f"📅 {status_text}\n\n"
+            message += f"⏰ Время добавления: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
 
-        message += f"⏰ Время добавления: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+            self.telegram_bot.send_message(message)
 
-        self.telegram_bot.send_message(message)
         logging.info(f"Отправлено уведомление о {len(new_employees)} новых сотрудниках")
 
     def _send_daily_report(self, expired: List, critical: List, no_medical: List):
