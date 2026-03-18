@@ -1,0 +1,22 @@
+{
+  "monitors": [
+    {
+      "name": "Додо Дубна",
+      "spreadsheet_id": "1V5lg68q8_poELjEiywKNpmTCb863-_8Mg-yYiSy7CaE",
+      "telegram_bot_token": "8352065538:AAGt89Ue9w89lpFD2POB_31J5YkakdxCJBA",
+      "telegram_chat_ids": ["1806148850", "7641322295"],
+      "worksheet_name": "Лист1",
+      "check_interval": 10,
+      "daily_report_time": "09:00",
+      "send_new_employee_notifications": true,
+      "log_level": "INFO"
+    }
+  ],
+  "system": {
+    "state_dir": "data/state",
+    "log_dir": "data/logs",
+    "max_log_files": 7,
+    "retry_attempts": 3,
+    "retry_delay": 5
+  }
+}
