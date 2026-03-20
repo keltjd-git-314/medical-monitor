@@ -65,9 +65,15 @@ def create_monitors(config_manager, system_config):
             )
 
             # Тестирование подключения к Telegram
-            if not telegram_bot.test_connection():
-                logging.error(f"Не удалось подключиться к Telegram для монитора {monitor_config.name}")
-                continue
+            # В РФ Telegram могут блокировать, из-за чего SSL/соединение может не пройти.
+            # Поэтому не выходим из цикла: монитор продолжит работу, а отправка сообщений будет обрабатываться
+            # внутри `send_message()` с перехватом ошибок.
+            tg_ok = telegram_bot.test_connection()
+            if not tg_ok:
+                logging.warning(
+                    f"Telegram недоступен для монитора {monitor_config.name} (возможна блокировка/SSL ошибка). "
+                    f"Монитор запустим, но сообщения могут не отправляться до восстановления."
+                )
 
             # Инициализация менеджера состояния
             state_manager = StateManager(
@@ -87,8 +93,9 @@ def create_monitors(config_manager, system_config):
             monitors.append(monitor)
             logging.info(f"✅ Монитор '{monitor_config.name}' успешно создан")
 
-            # Отправка тестового сообщения
-            telegram_bot.send_test_message()
+            # Отправка тестового сообщения только если тест подключения прошёл успешно
+            if tg_ok:
+                telegram_bot.send_test_message()
 
         except Exception as e:
             logging.error(f"❌ Ошибка создания монитора {monitor_config.name}: {e}")
