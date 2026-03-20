@@ -1,5 +1,7 @@
+import os
+import time
 import requests
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 import logging
 
 
@@ -10,6 +12,58 @@ class TelegramBot:
         self.bot_token = bot_token
         self.chat_ids = chat_ids
         self.base_url = f"https://api.telegram.org/bot{bot_token}"
+        self.session = requests.Session()
+        # Явно подхватываем прокси. Ожидается, что у вас заданы HTTP(S)_PROXY
+        # (например http://127.0.0.1:8080) или TELEGRAM_PROXY.
+        self.proxies = self._load_proxies()
+
+    def _load_proxies(self) -> Optional[Dict[str, str]]:
+        telegram_proxy = os.getenv("TELEGRAM_PROXY")
+        if telegram_proxy:
+            return {"http": telegram_proxy, "https": telegram_proxy}
+
+        http_proxy = os.getenv("HTTP_PROXY") or os.getenv("http_proxy")
+        https_proxy = os.getenv("HTTPS_PROXY") or os.getenv("https_proxy")
+
+        proxies: Dict[str, str] = {}
+        if http_proxy:
+            proxies["http"] = http_proxy
+        if https_proxy:
+            proxies["https"] = https_proxy
+
+        return proxies or None
+
+    def _request_with_retries(
+        self,
+        method: str,
+        url: str,
+        *,
+        timeout: int = 10,
+        max_attempts: int = 3,
+        backoff_seconds: float = 1.0,
+        **kwargs: Any,
+    ):
+        last_exc: Optional[Exception] = None
+        for attempt in range(1, max_attempts + 1):
+            try:
+                return self.session.request(
+                    method=method,
+                    url=url,
+                    timeout=timeout,
+                    proxies=self.proxies,
+                    **kwargs,
+                )
+            except Exception as e:
+                last_exc = e
+                sleep_s = backoff_seconds * (2 ** (attempt - 1))
+                logging.warning(
+                    f"Telegram request failed (attempt {attempt}/{max_attempts}): "
+                    f"{type(e).__name__}: {e}. Sleep {sleep_s:.1f}s"
+                )
+                time.sleep(sleep_s)
+
+        assert last_exc is not None
+        raise last_exc
 
     def send_message(self, text: str, parse_mode: str = "HTML",
                      disable_web_page_preview: bool = True) -> bool:
@@ -40,7 +94,14 @@ class TelegramBot:
                     'disable_web_page_preview': disable_web_page_preview
                 }
 
-                response = requests.post(url, json=payload, timeout=10)
+                response = self._request_with_retries(
+                    "POST",
+                    url,
+                    json=payload,
+                    timeout=10,
+                    max_attempts=3,
+                    backoff_seconds=1.0,
+                )
 
                 if response.status_code == 200:
                     success_count += 1
@@ -57,7 +118,13 @@ class TelegramBot:
         """Тестирование подключения к боту"""
         try:
             url = f"{self.base_url}/getMe"
-            response = requests.get(url, timeout=5)
+            response = self._request_with_retries(
+                "GET",
+                url,
+                timeout=5,
+                max_attempts=3,
+                backoff_seconds=0.5,
+            )
 
             if response.status_code == 200:
                 bot_info = response.json()
