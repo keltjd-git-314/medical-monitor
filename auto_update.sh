@@ -24,7 +24,7 @@ log "Текущая версия: $CURRENT_HASH"
 git fetch origin
 
 # Проверяем изменения в ветке main
-if ! git diff --quiet origin/main; then
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
     log "🔍 Обнаружены изменения. Начинаю обновление..."
 
     # Останавливаем приложение (убиваем screen сессию)
