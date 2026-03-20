@@ -48,7 +48,7 @@ if ! git diff --quiet origin/main; then
     # Запускаем приложение заново
     log "🚀 Запускаю приложение..."
     cd "$PROJECT_DIR"
-    screen -dmS "$SCREEN_NAME" bash -c "source medical_env/bin/activate && python3 main.py"
+    screen -dmS "$SCREEN_NAME" bash -c "cd /home/keltjd/medical_monitor && source medical_env/bin/activate && ALL_PROXY=socks5://127.0.0.1:10808 python3 main.py"
     
     # Проверяем, что запустилось
     sleep 3
